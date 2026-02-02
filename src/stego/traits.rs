@@ -1,34 +1,24 @@
 use anyhow::Result;
 use std::path::Path;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, clap::ValueEnum)]
 pub enum StegoMethodType {
     /// LSB (Least Significant Bit) embedding
+    #[default]
     Lsb,
     /// RIFF metadata chunk embedding
     Metadata,
 }
 
-impl Default for StegoMethodType {
-    fn default() -> Self {
-        Self::Lsb
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, clap::ValueEnum)]
 pub enum ChannelMode {
     /// Embed in left channel only
     Left,
     /// Embed in right channel only
     Right,
     /// Embed in both channels
+    #[default]
     Both,
-}
-
-impl Default for ChannelMode {
-    fn default() -> Self {
-        Self::Both
-    }
 }
 
 pub struct EmbedOptions {

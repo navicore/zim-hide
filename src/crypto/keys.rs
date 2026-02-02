@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Result};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use anyhow::{Result, anyhow};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
 use std::fs;
@@ -67,7 +67,10 @@ impl PrivateKey {
         bytes.extend_from_slice(self.x25519.as_bytes());
 
         let encoded = BASE64.encode(&bytes);
-        let content = format!("{}\n{}\n{}\n", PRIVATE_KEY_HEADER, encoded, PRIVATE_KEY_FOOTER);
+        let content = format!(
+            "{}\n{}\n{}\n",
+            PRIVATE_KEY_HEADER, encoded, PRIVATE_KEY_FOOTER
+        );
 
         fs::write(path, content)?;
 
@@ -130,7 +133,10 @@ impl PublicKey {
         bytes.extend_from_slice(self.x25519.as_bytes());
 
         let encoded = BASE64.encode(&bytes);
-        let content = format!("{}\n{}\n{}\n", PUBLIC_KEY_HEADER, encoded, PUBLIC_KEY_FOOTER);
+        let content = format!(
+            "{}\n{}\n{}\n",
+            PUBLIC_KEY_HEADER, encoded, PUBLIC_KEY_FOOTER
+        );
 
         fs::write(path, content)?;
         Ok(())
@@ -162,8 +168,8 @@ impl PublicKey {
         let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().unwrap();
         let x25519_bytes: [u8; 32] = bytes[32..64].try_into().unwrap();
 
-        let ed25519 =
-            VerifyingKey::from_bytes(&ed25519_bytes).map_err(|e| anyhow!("Invalid Ed25519 public key: {}", e))?;
+        let ed25519 = VerifyingKey::from_bytes(&ed25519_bytes)
+            .map_err(|e| anyhow!("Invalid Ed25519 public key: {}", e))?;
         let x25519 = X25519Public::from(x25519_bytes);
 
         Ok(Self { ed25519, x25519 })

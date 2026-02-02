@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use hound::WavSpec;
 use std::path::Path;
 
@@ -15,7 +15,12 @@ impl WavWriter {
                 8 => writer.write_sample(*sample as i8)?,
                 16 => writer.write_sample(*sample as i16)?,
                 24 | 32 => writer.write_sample(*sample)?,
-                _ => return Err(anyhow!("Unsupported bits per sample: {}", spec.bits_per_sample)),
+                _ => {
+                    return Err(anyhow!(
+                        "Unsupported bits per sample: {}",
+                        spec.bits_per_sample
+                    ));
+                }
             }
         }
 

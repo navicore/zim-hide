@@ -2,6 +2,7 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use std::process::Command;
 use tempfile::tempdir;
 
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 fn create_test_wav(path: &std::path::Path) {
     let spec = WavSpec {
         channels: 2,
@@ -39,7 +40,14 @@ fn test_basic_encode_decode_cycle() {
 
     // Encode
     let status = Command::new(vvw_binary())
-        .args(["encode", input.to_str().unwrap(), "-o", output.to_str().unwrap(), "--message", "Hello, world!"])
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Hello, world!",
+        ])
         .status()
         .unwrap();
     assert!(status.success(), "encode failed");
@@ -81,10 +89,18 @@ fn test_symmetric_encryption_cycle() {
 
     // Decode with correct passphrase
     let output_result = Command::new(vvw_binary())
-        .args(["decode", output.to_str().unwrap(), "--passphrase", "puzzle123"])
+        .args([
+            "decode",
+            output.to_str().unwrap(),
+            "--passphrase",
+            "puzzle123",
+        ])
         .output()
         .unwrap();
-    assert!(output_result.status.success(), "decode with passphrase failed");
+    assert!(
+        output_result.status.success(),
+        "decode with passphrase failed"
+    );
 
     let decoded = String::from_utf8_lossy(&output_result.stdout);
     assert_eq!(decoded.trim(), "Secret message");
@@ -94,7 +110,10 @@ fn test_symmetric_encryption_cycle() {
         .args(["decode", output.to_str().unwrap()])
         .output()
         .unwrap();
-    assert!(!fail_result.status.success(), "decode without passphrase should fail");
+    assert!(
+        !fail_result.status.success(),
+        "decode without passphrase should fail"
+    );
 }
 
 #[test]
@@ -144,7 +163,10 @@ fn test_asymmetric_encryption_cycle() {
         ])
         .output()
         .unwrap();
-    assert!(output_result.status.success(), "decode with private key failed");
+    assert!(
+        output_result.status.success(),
+        "decode with private key failed"
+    );
 
     let decoded = String::from_utf8_lossy(&output_result.stdout);
     assert_eq!(decoded.trim(), "Asymmetric secret");
@@ -195,7 +217,10 @@ fn test_signed_message() {
         ])
         .output()
         .unwrap();
-    assert!(output_result.status.success(), "decode with verification failed");
+    assert!(
+        output_result.status.success(),
+        "decode with verification failed"
+    );
 
     let decoded = String::from_utf8_lossy(&output_result.stdout);
     assert_eq!(decoded.trim(), "Signed message");

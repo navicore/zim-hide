@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use argon2::{
-    password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHasher,
+    password_hash::{SaltString, rand_core::OsRng},
 };
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
     ChaCha20Poly1305, Nonce,
+    aead::{Aead, KeyInit},
 };
 use rand::RngCore;
 
@@ -62,7 +62,7 @@ pub fn decrypt_symmetric(data: &[u8], passphrase: &str) -> Result<Vec<u8>> {
         return Err(anyhow!("Ciphertext too short"));
     }
 
-    let salt_bytes = &data[1..1 + salt_len];
+    let salt_bytes = &data[1..=salt_len];
     let salt_str = std::str::from_utf8(salt_bytes)?;
     let salt = SaltString::from_b64(salt_str).map_err(|e| anyhow!("Invalid salt: {}", e))?;
 

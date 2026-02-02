@@ -1,10 +1,10 @@
 use anyhow::Result;
 use std::path::Path;
 
-pub fn compress_audio(_path: &Path) -> Result<Vec<u8>> {
+pub fn compress_audio(path: &Path) -> Result<Vec<u8>> {
     // For now, just read the raw WAV file bytes
     // In Phase 3, this will use Opus compression
-    let bytes = std::fs::read(_path)?;
+    let bytes = std::fs::read(path)?;
     Ok(bytes)
 }
 

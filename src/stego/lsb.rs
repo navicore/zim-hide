@@ -1,5 +1,5 @@
 use super::traits::{ChannelMode, EmbedOptions, StegoMethod, StegoMethodType};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use std::path::Path;
 
@@ -31,7 +31,7 @@ impl LsbSteganography {
     fn should_use_sample(&self, sample_index: usize, num_channels: u16) -> bool {
         match self.options.channels {
             ChannelMode::Both => true,
-            ChannelMode::Left => sample_index % num_channels as usize == 0,
+            ChannelMode::Left => sample_index.is_multiple_of(num_channels as usize),
             ChannelMode::Right => sample_index % num_channels as usize == 1,
         }
     }
@@ -125,7 +125,12 @@ impl StegoMethod for LsbSteganography {
                 8 => writer.write_sample(sample as i8)?,
                 16 => writer.write_sample(sample as i16)?,
                 24 | 32 => writer.write_sample(sample)?,
-                _ => return Err(anyhow!("Unsupported bits per sample: {}", spec.bits_per_sample)),
+                _ => {
+                    return Err(anyhow!(
+                        "Unsupported bits per sample: {}",
+                        spec.bits_per_sample
+                    ));
+                }
             }
         }
         writer.finalize()?;
@@ -141,7 +146,7 @@ impl StegoMethod for LsbSteganography {
 
         // First, extract length (4 bytes = 32 bits)
         let bits_for_length = 32usize;
-        let samples_for_length = (bits_for_length + bits_per_sample as usize - 1) / bits_per_sample as usize;
+        let samples_for_length = bits_for_length.div_ceil(bits_per_sample as usize);
 
         let mut length_bits = Vec::new();
         let mut samples_used = 0;
@@ -255,7 +260,8 @@ mod tests {
 
         // Write some samples
         for i in 0..44100 {
-            let sample = ((i as f32 / 44100.0 * 440.0 * 2.0 * std::f32::consts::PI).sin() * 10000.0) as i16;
+            let sample =
+                ((i as f32 / 44100.0 * 440.0 * 2.0 * std::f32::consts::PI).sin() * 10000.0) as i16;
             writer.write_sample(sample).unwrap();
             writer.write_sample(sample).unwrap();
         }

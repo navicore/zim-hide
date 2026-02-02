@@ -1,8 +1,8 @@
 use super::keys::{PrivateKey, PublicKey};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
     XChaCha20Poly1305, XNonce,
+    aead::{Aead, KeyInit},
 };
 use rand::RngCore;
 use x25519_dalek::{PublicKey as X25519Public, StaticSecret as X25519Secret};
@@ -113,19 +113,18 @@ pub fn decrypt_asymmetric(data: &[u8], private_key: &PrivateKey) -> Result<Vec<u
         let key_cipher = XChaCha20Poly1305::new_from_slice(&key_encryption_key)
             .map_err(|e| anyhow!("Key cipher creation failed: {}", e))?;
 
-        if let Ok(decrypted_key) = key_cipher.decrypt(XNonce::from_slice(key_nonce), wrapped_key) {
-            if decrypted_key.len() == KEY_SIZE {
-                let mut key = [0u8; KEY_SIZE];
-                key.copy_from_slice(&decrypted_key);
-                symmetric_key = Some(key);
-                break;
-            }
+        if let Ok(decrypted_key) = key_cipher.decrypt(XNonce::from_slice(key_nonce), wrapped_key)
+            && decrypted_key.len() == KEY_SIZE
+        {
+            let mut key = [0u8; KEY_SIZE];
+            key.copy_from_slice(&decrypted_key);
+            symmetric_key = Some(key);
+            break;
         }
     }
 
-    let symmetric_key = symmetric_key.ok_or_else(|| {
-        anyhow!("Could not decrypt: you may not be a recipient")
-    })?;
+    let symmetric_key =
+        symmetric_key.ok_or_else(|| anyhow!("Could not decrypt: you may not be a recipient"))?;
 
     // Decrypt payload
     let payload_nonce = &data[header_size..header_size + XNONCE_SIZE];
@@ -175,7 +174,8 @@ mod tests {
         let keypair = Keypair::generate();
         let plaintext = b"Secret message for one recipient";
 
-        let encrypted = encrypt_asymmetric(plaintext, &[keypair.public.clone()]).unwrap();
+        let encrypted =
+            encrypt_asymmetric(plaintext, std::slice::from_ref(&keypair.public)).unwrap();
         let decrypted = decrypt_asymmetric(&encrypted, &keypair.private).unwrap();
 
         assert_eq!(plaintext.as_slice(), decrypted.as_slice());
@@ -187,8 +187,8 @@ mod tests {
         let keypair2 = Keypair::generate();
         let plaintext = b"Secret message for multiple recipients";
 
-        let encrypted =
-            encrypt_asymmetric(plaintext, &[keypair1.public.clone(), keypair2.public.clone()]).unwrap();
+        let recipients = [keypair1.public.clone(), keypair2.public.clone()];
+        let encrypted = encrypt_asymmetric(plaintext, &recipients).unwrap();
 
         // Both recipients should be able to decrypt
         let decrypted1 = decrypt_asymmetric(&encrypted, &keypair1.private).unwrap();
@@ -204,7 +204,8 @@ mod tests {
         let non_recipient = Keypair::generate();
         let plaintext = b"Secret message";
 
-        let encrypted = encrypt_asymmetric(plaintext, &[recipient.public.clone()]).unwrap();
+        let encrypted =
+            encrypt_asymmetric(plaintext, std::slice::from_ref(&recipient.public)).unwrap();
         let result = decrypt_asymmetric(&encrypted, &non_recipient.private);
 
         assert!(result.is_err());

@@ -1,5 +1,5 @@
 use super::traits::{StegoMethod, StegoMethodType};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -106,7 +106,7 @@ impl StegoMethod for MetadataSteganography {
         chunk.extend_from_slice(CHUNK_ID);
         chunk.extend_from_slice(&chunk_size.to_le_bytes());
         chunk.extend_from_slice(data);
-        if data.len() % 2 != 0 {
+        if !data.len().is_multiple_of(2) {
             chunk.push(0); // Padding byte
         }
 

@@ -1,10 +1,8 @@
-use crate::crypto::{
-    encrypt_asymmetric, encrypt_symmetric, sign_message, PrivateKey, PublicKey,
-};
+use crate::crypto::{PrivateKey, PublicKey, encrypt_asymmetric, encrypt_symmetric, sign_message};
 use crate::format::{EmbeddedData, Flags, Header, Payload};
-use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod, StegoMethodType};
 use crate::stego::traits::{ChannelMode, EmbedOptions};
-use anyhow::{anyhow, Result};
+use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod, StegoMethodType};
+use anyhow::{Result, anyhow};
 use clap::Args;
 use std::fs;
 use std::path::PathBuf;
@@ -62,7 +60,10 @@ pub struct EncodeArgs {
 pub fn run(args: EncodeArgs) -> Result<()> {
     // Validate input file exists
     if !args.input.exists() {
-        return Err(anyhow!("Input file does not exist: {}", args.input.display()));
+        return Err(anyhow!(
+            "Input file does not exist: {}",
+            args.input.display()
+        ));
     }
 
     // Get message content
@@ -113,7 +114,10 @@ pub fn run(args: EncodeArgs) -> Result<()> {
 
     // Signing
     let signature = if args.sign {
-        let key_path = args.key.as_ref().ok_or_else(|| anyhow!("--key is required for signing"))?;
+        let key_path = args
+            .key
+            .as_ref()
+            .ok_or_else(|| anyhow!("--key is required for signing"))?;
         let private_key = PrivateKey::load(key_path)?;
         flags.is_signed = true;
         Some(sign_message(&payload_bytes, &private_key))

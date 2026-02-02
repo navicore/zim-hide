@@ -1,9 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 pub const MAGIC: &[u8; 4] = b"VVW\x01";
 pub const SIGNATURE_SIZE: usize = 64;
 
 #[derive(Debug, Clone, Copy, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Flags {
     pub has_text: bool,
     pub has_audio: bool,
@@ -13,7 +14,7 @@ pub struct Flags {
 }
 
 impl Flags {
-    pub fn to_byte(&self) -> u8 {
+    pub fn as_byte(self) -> u8 {
         let mut byte = 0u8;
         if self.has_text {
             byte |= 1 << 0;
@@ -78,7 +79,7 @@ impl Header {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(Self::SIZE);
         bytes.extend_from_slice(MAGIC);
-        bytes.push(self.flags.to_byte());
+        bytes.push(self.flags.as_byte());
         bytes.push(self.method as u8);
         bytes.extend_from_slice(&self.payload_length.to_le_bytes());
         bytes
@@ -263,7 +264,7 @@ mod tests {
             symmetric_encryption: false,
             asymmetric_encryption: true,
         };
-        let byte = flags.to_byte();
+        let byte = flags.as_byte();
         let decoded = Flags::from_byte(byte);
         assert_eq!(flags.has_text, decoded.has_text);
         assert_eq!(flags.has_audio, decoded.has_audio);

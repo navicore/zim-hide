@@ -1,9 +1,10 @@
 use crate::crypto::asymmetric::recipient_count;
 use crate::format::EmbeddedData;
 use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod, StegoMethodType};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Args;
-use std::path::PathBuf;
+use std::fmt::Write;
+use std::path::{Path, PathBuf};
 
 #[derive(Args)]
 pub struct InspectArgs {
@@ -13,7 +14,10 @@ pub struct InspectArgs {
 
 pub fn run(args: InspectArgs) -> Result<()> {
     if !args.input.exists() {
-        return Err(anyhow!("Input file does not exist: {}", args.input.display()));
+        return Err(anyhow!(
+            "Input file does not exist: {}",
+            args.input.display()
+        ));
     }
 
     // Try to extract and parse the embedded data
@@ -64,7 +68,11 @@ pub fn run(args: InspectArgs) -> Result<()> {
         println!("symmetric (passphrase)");
     } else if flags.asymmetric_encryption {
         if let Some(count) = recipient_count(&embedded.payload) {
-            println!("asymmetric ({} recipient{})", count, if count == 1 { "" } else { "s" });
+            println!(
+                "asymmetric ({} recipient{})",
+                count,
+                if count == 1 { "" } else { "s" }
+            );
         } else {
             println!("asymmetric");
         }
@@ -76,8 +84,11 @@ pub fn run(args: InspectArgs) -> Result<()> {
     print!("Signed: ");
     if flags.is_signed {
         if let Some(sig) = &embedded.signature {
-            let fingerprint: String = sig.iter().take(6).map(|b| format!("{:02x}", b)).collect();
-            println!("yes (sig: {}...)", fingerprint);
+            let fingerprint = sig.iter().take(6).fold(String::new(), |mut s, b| {
+                let _ = write!(s, "{b:02x}");
+                s
+            });
+            println!("yes (sig: {fingerprint}...)");
         } else {
             println!("yes");
         }
@@ -96,14 +107,15 @@ pub fn run(args: InspectArgs) -> Result<()> {
     Ok(())
 }
 
-fn try_extract_with_info(path: &PathBuf) -> Result<(Vec<u8>, StegoMethodType, usize)> {
+fn try_extract_with_info(path: &Path) -> Result<(Vec<u8>, StegoMethodType, usize)> {
     // Try metadata first
     let metadata_stego = MetadataSteganography::new();
-    if let Ok(data) = metadata_stego.extract(path) {
-        if data.len() >= 4 && &data[0..4] == b"VVW\x01" {
-            let capacity = metadata_stego.capacity(path)?;
-            return Ok((data, StegoMethodType::Metadata, capacity));
-        }
+    if let Ok(data) = metadata_stego.extract(path)
+        && data.len() >= 4
+        && &data[0..4] == b"VVW\x01"
+    {
+        let capacity = metadata_stego.capacity(path)?;
+        return Ok((data, StegoMethodType::Metadata, capacity));
     }
 
     // Try LSB with default options

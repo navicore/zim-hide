@@ -1,5 +1,5 @@
 use super::keys::{PrivateKey, PublicKey};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use ed25519_dalek::{Signature, Signer, Verifier};
 
 pub const SIGNATURE_SIZE: usize = 64;
@@ -9,7 +9,11 @@ pub fn sign_message(message: &[u8], private_key: &PrivateKey) -> [u8; SIGNATURE_
     signature.to_bytes()
 }
 
-pub fn verify_signature(message: &[u8], signature: &[u8; SIGNATURE_SIZE], public_key: &PublicKey) -> Result<()> {
+pub fn verify_signature(
+    message: &[u8],
+    signature: &[u8; SIGNATURE_SIZE],
+    public_key: &PublicKey,
+) -> Result<()> {
     let signature = Signature::from_bytes(signature);
 
     public_key

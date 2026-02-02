@@ -1,5 +1,6 @@
 use crate::crypto::keys::Keypair;
 use anyhow::Result;
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use clap::Args;
 use std::path::PathBuf;
 
@@ -32,8 +33,6 @@ pub fn run(args: KeygenArgs) -> Result<()> {
         let mut pub_bytes = Vec::with_capacity(64);
         pub_bytes.extend_from_slice(keypair.public.ed25519.as_bytes());
         pub_bytes.extend_from_slice(keypair.public.x25519.as_bytes());
-
-        use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 
         println!("# VVW Keypair");
         println!("# Fingerprint: {}", keypair.public.fingerprint());

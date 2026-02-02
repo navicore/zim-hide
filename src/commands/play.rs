@@ -1,8 +1,8 @@
-use crate::crypto::{decrypt_asymmetric, decrypt_symmetric, PrivateKey};
+use crate::crypto::{PrivateKey, decrypt_asymmetric, decrypt_symmetric};
 use crate::format::{EmbeddedData, Payload};
-use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod};
 use crate::stego::traits::{ChannelMode, EmbedOptions};
-use anyhow::{anyhow, Result};
+use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod};
+use anyhow::{Result, anyhow};
 use clap::Args;
 use std::path::PathBuf;
 use std::process::Command;
@@ -39,7 +39,10 @@ pub struct PlayArgs {
 
 pub fn run(args: PlayArgs) -> Result<()> {
     if !args.input.exists() {
-        return Err(anyhow!("Input file does not exist: {}", args.input.display()));
+        return Err(anyhow!(
+            "Input file does not exist: {}",
+            args.input.display()
+        ));
     }
 
     // Extract embedded data
@@ -102,10 +105,11 @@ pub fn run(args: PlayArgs) -> Result<()> {
 fn try_extract(args: &PlayArgs) -> Result<Vec<u8>> {
     // Try metadata first
     let metadata_stego = MetadataSteganography::new();
-    if let Ok(data) = metadata_stego.extract(&args.input) {
-        if data.len() >= 4 && &data[0..4] == b"VVW\x01" {
-            return Ok(data);
-        }
+    if let Ok(data) = metadata_stego.extract(&args.input)
+        && data.len() >= 4
+        && &data[0..4] == b"VVW\x01"
+    {
+        return Ok(data);
     }
 
     // Try LSB

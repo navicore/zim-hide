@@ -1,10 +1,10 @@
 use crate::crypto::{
-    decrypt_asymmetric, decrypt_symmetric, verify_signature, PrivateKey, PublicKey,
+    PrivateKey, PublicKey, decrypt_asymmetric, decrypt_symmetric, verify_signature,
 };
 use crate::format::{EmbeddedData, Payload};
-use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod};
 use crate::stego::traits::{ChannelMode, EmbedOptions};
-use anyhow::{anyhow, Result};
+use crate::stego::{LsbSteganography, MetadataSteganography, StegoMethod};
+use anyhow::{Result, anyhow};
 use clap::Args;
 use std::path::PathBuf;
 
@@ -36,7 +36,10 @@ pub struct DecodeArgs {
 
 pub fn run(args: DecodeArgs) -> Result<()> {
     if !args.input.exists() {
-        return Err(anyhow!("Input file does not exist: {}", args.input.display()));
+        return Err(anyhow!(
+            "Input file does not exist: {}",
+            args.input.display()
+        ));
     }
 
     // Try LSB first, then metadata
@@ -97,11 +100,11 @@ pub fn run(args: DecodeArgs) -> Result<()> {
 fn try_extract(args: &DecodeArgs) -> Result<Vec<u8>> {
     // Try metadata first (quick check)
     let metadata_stego = MetadataSteganography::new();
-    if let Ok(data) = metadata_stego.extract(&args.input) {
-        // Verify it's valid VVW data
-        if data.len() >= 4 && &data[0..4] == b"VVW\x01" {
-            return Ok(data);
-        }
+    if let Ok(data) = metadata_stego.extract(&args.input)
+        && data.len() >= 4
+        && &data[0..4] == b"VVW\x01"
+    {
+        return Ok(data);
     }
 
     // Try LSB
