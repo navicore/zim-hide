@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 
 pub const MAGIC: &[u8; 4] = b"ZIMH";
+pub const VERSION: u8 = 1;
 pub const SIGNATURE_SIZE: usize = 64;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -68,17 +69,19 @@ impl TryFrom<u8> for StegoMethodId {
 
 #[derive(Debug, Clone)]
 pub struct Header {
+    pub version: u8,
     pub flags: Flags,
     pub method: StegoMethodId,
     pub payload_length: u32,
 }
 
 impl Header {
-    pub const SIZE: usize = 4 + 1 + 1 + 4; // magic + flags + method + length
+    pub const SIZE: usize = 4 + 1 + 1 + 1 + 4; // magic + version + flags + method + length
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(Self::SIZE);
         bytes.extend_from_slice(MAGIC);
+        bytes.push(self.version);
         bytes.push(self.flags.as_byte());
         bytes.push(self.method as u8);
         bytes.extend_from_slice(&self.payload_length.to_le_bytes());
@@ -98,11 +101,21 @@ impl Header {
             return Err(anyhow!("Invalid magic bytes - not a zimhide file"));
         }
 
-        let flags = Flags::from_byte(bytes[4]);
-        let method = StegoMethodId::try_from(bytes[5])?;
-        let payload_length = u32::from_le_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]);
+        let version = bytes[4];
+        if version > VERSION {
+            return Err(anyhow!(
+                "Unsupported format version: {} (this tool supports up to version {})",
+                version,
+                VERSION
+            ));
+        }
+
+        let flags = Flags::from_byte(bytes[5]);
+        let method = StegoMethodId::try_from(bytes[6])?;
+        let payload_length = u32::from_le_bytes([bytes[7], bytes[8], bytes[9], bytes[10]]);
 
         Ok(Self {
+            version,
             flags,
             method,
             payload_length,
@@ -288,6 +301,7 @@ mod tests {
     #[test]
     fn test_header_roundtrip() {
         let header = Header {
+            version: VERSION,
             flags: Flags {
                 has_text: true,
                 ..Default::default()
@@ -297,6 +311,7 @@ mod tests {
         };
         let bytes = header.to_bytes();
         let decoded = Header::from_bytes(&bytes).unwrap();
+        assert_eq!(header.version, decoded.version);
         assert_eq!(header.payload_length, decoded.payload_length);
     }
 }

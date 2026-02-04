@@ -139,6 +139,7 @@ pub fn run(args: EncodeArgs) -> Result<()> {
     };
 
     let header = Header {
+        version: crate::format::payload::VERSION,
         flags,
         method: method_id,
         payload_length: payload_bytes.len() as u32,

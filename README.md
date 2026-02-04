@@ -180,12 +180,15 @@ Key files use a PEM-like format:
 
 ```
 [4 bytes]  Magic: "ZIMH"
+[1 byte]   Version (currently 1)
 [1 byte]   Flags (text, audio, signed, symmetric, asymmetric)
-[1 byte]   Method (0=LSB, 1=metadata, 2=spread)
+[1 byte]   Method (0=LSB, 1=metadata)
 [4 bytes]  Payload length
 [N bytes]  Payload (encrypted if applicable)
 [64 bytes] Signature (if signed)
 ```
+
+See [PROTOCOL.md](PROTOCOL.md) for complete byte-level documentation of all formats.
 
 ## Shell Completions
 
