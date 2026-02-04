@@ -1,6 +1,6 @@
 [package]
 name = "zimhide"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Zim Steganography Toolkit - WAV steganography CLI for embedding and extracting encrypted text/audio"
 license = "MIT"
