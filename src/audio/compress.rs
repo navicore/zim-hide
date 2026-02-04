@@ -141,8 +141,7 @@ mod opus_impl {
         };
 
         // Create Opus decoder
-        let mut decoder =
-            Decoder::new(48000, channels).context("Failed to create Opus decoder")?;
+        let mut decoder = Decoder::new(48000, channels).context("Failed to create Opus decoder")?;
 
         // Decode all frames
         let mut samples: Vec<i16> = Vec::new();
