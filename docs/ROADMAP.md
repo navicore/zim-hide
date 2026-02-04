@@ -29,7 +29,8 @@ zimhide/
 │   │   ├── decode.rs
 │   │   ├── play.rs
 │   │   ├── keygen.rs
-│   │   └── inspect.rs
+│   │   ├── inspect.rs
+│   │   └── completions.rs
 │   ├── stego/
 │   │   ├── mod.rs
 │   │   ├── lsb.rs           # LSB embedding/extraction
@@ -158,14 +159,14 @@ Custom chunk ID: `zimH` (lowercase = non-standard per RIFF spec)
 
 ---
 
-## Phase 5: Polish 🔲
+## Phase 5: Polish 🔄
 
-**Status: Not Started**
+**Status: Partially Complete**
 
 - [ ] Better error messages with context
 - [ ] Progress indicators for large files
 - [ ] `--quiet` and `--verbose` flags
-- [ ] Shell completions (bash, zsh, fish)
+- [x] Shell completions (bash, zsh, fish, powershell, elvish)
 - [ ] Man page generation
 - [ ] More comprehensive test coverage
 - [ ] Benchmarks
@@ -385,4 +386,15 @@ Usage: zimhide inspect <INPUT>
 
 Arguments:
   <INPUT>  Input WAV file to inspect
+```
+
+### zimhide completions
+
+```
+Generate shell completions
+
+Usage: zimhide completions <SHELL>
+
+Arguments:
+  <SHELL>  Shell to generate completions for [bash, zsh, fish, powershell, elvish]
 ```
