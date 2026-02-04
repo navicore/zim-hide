@@ -1,4 +1,4 @@
-name: Release
+name: Release with Auto Version
 
 on:
   release:
@@ -9,12 +9,15 @@ env:
 
 jobs:
   publish:
-    name: Publish to crates.io
+    name: Auto-version and Publish
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PAT }}
+          ref: main
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -26,16 +29,30 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
-      - name: Verify Cargo.toml version matches tag
+      - name: Update version in Cargo.toml
         run: |
-          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
-          TAG_VERSION="${{ steps.version.outputs.version }}"
-          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
-            echo "ERROR: Cargo.toml version ($CARGO_VERSION) doesn't match tag ($TAG_VERSION)"
-            echo "Update Cargo.toml version before creating the release."
-            exit 1
+          CURRENT_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
+
+          if [ "$CURRENT_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Updating version from $CURRENT_VERSION to ${{ steps.version.outputs.version }}"
+
+            # Update version in Cargo.toml
+            sed -i "s/^version = \"$CURRENT_VERSION\"/version = \"${{ steps.version.outputs.version }}\"/" Cargo.toml
+
+            # Regenerate lockfile
+            cargo generate-lockfile
+
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+
+            git add Cargo.toml Cargo.lock
+            git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+            git push origin HEAD:main
+
+            echo "Version updated and pushed"
+          else
+            echo "Version already matches tag, skipping update"
           fi
-          echo "✓ Version matches: $CARGO_VERSION"
 
       - name: Run tests
         run: cargo test --all-targets
@@ -53,6 +70,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Install Rust with musl target
         uses: dtolnay/rust-toolchain@stable
@@ -92,6 +111,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -116,6 +137,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
