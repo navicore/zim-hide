@@ -1,3 +1,6 @@
+[![CI](https://github.com/navicore/zim-hide/actions/workflows/ci.yml/badge.svg)](https://github.com/navicore/zim-hide/actions/workflows/ci.yml)
+[![zimhide](https://img.shields.io/crates/v/zimhide.svg?label=zimhide)](https://crates.io/crates/zimhide)
+
 # Zim Steganography Toolkit (zimhide)
 
 A Rust CLI for embedding and extracting encrypted text and audio in WAV files. Part of the Zim tool family.
