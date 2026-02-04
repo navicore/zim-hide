@@ -24,7 +24,14 @@ pub struct EncodeArgs {
     #[arg(long, conflicts_with = "message")]
     pub message_file: Option<PathBuf>,
 
-    /// Audio file to embed
+    #[cfg_attr(
+        feature = "opus-compression",
+        doc = "Audio file to embed (WAV, 48kHz, 16-bit, mono/stereo). Compressed with Opus."
+    )]
+    #[cfg_attr(
+        not(feature = "opus-compression"),
+        doc = "Audio file to embed (raw WAV bytes, no compression)"
+    )]
     #[arg(long)]
     pub audio: Option<PathBuf>,
 

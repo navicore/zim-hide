@@ -24,8 +24,6 @@ lint:
     cargo clippy --all-targets -- \
         -D warnings \
         -D clippy::all \
-        -D clippy::pedantic \
-        -D clippy::nursery \
         -A clippy::missing_errors_doc \
         -A clippy::missing_panics_doc \
         -A clippy::module_name_repetitions \

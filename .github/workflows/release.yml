@@ -22,6 +22,9 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install libopus
+        run: sudo apt-get update && sudo apt-get install -y libopus-dev
+
       - name: Extract version from tag
         id: version
         run: |
@@ -80,9 +83,9 @@ jobs:
       - name: Install musl-tools
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Build static binary
+      - name: Build static binary (without Opus for static linking simplicity)
         run: |
-          cargo build --release --target x86_64-unknown-linux-musl
+          cargo build --release --target x86_64-unknown-linux-musl --no-default-features
           strip target/x86_64-unknown-linux-musl/release/zimhide
 
       - name: Verify static linking
@@ -115,6 +118,9 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install libopus
+        run: brew install opus
 
       - name: Build binary
         run: cargo build --release
@@ -154,8 +160,10 @@ jobs:
             ## Binary Downloads
 
             Pre-built binaries are available for:
-            - **Linux x86_64** (statically linked, works on any Linux)
-            - **macOS ARM64** (Apple Silicon)
+            - **Linux x86_64** (statically linked, works on any Linux, no Opus compression)
+            - **macOS ARM64** (Apple Silicon, with Opus compression)
+
+            Note: The Linux binary is built without Opus to enable static linking. Audio embedding uses raw WAV bytes (larger). For Opus compression, build from source with libopus installed.
 
             ### Installation
 

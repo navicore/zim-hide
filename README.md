@@ -4,11 +4,27 @@ A Rust CLI for embedding and extracting encrypted text and audio in WAV files. P
 
 ## Installation
 
+### Build
+
 ```bash
+# With Opus compression (default) - requires libopus
 cargo build --release
+
+# Without Opus (no system dependencies, but larger embedded audio)
+cargo build --release --no-default-features
 ```
 
 The binary will be at `target/release/zimhide`.
+
+### Opus Compression (Optional)
+
+By default, embedded audio is compressed with Opus (~10x smaller). This requires libopus:
+
+- **macOS**: `brew install opus`
+- **Ubuntu/Debian**: `apt install libopus-dev`
+- **Fedora**: `dnf install opus-devel`
+
+If libopus is not available, build with `--no-default-features` to embed raw WAV bytes instead.
 
 ## Quick Start
 
@@ -62,19 +78,39 @@ zimhide encode input.wav -o output.wav --message "data" --bits 2 --channels left
 zimhide decode output.wav
 ```
 
+### Audio Embedding
+
+Embed audio files inside a carrier WAV. The embedded audio is compressed with Opus (~10x compression).
+
+**Requirements**: Embedded audio must be 48kHz, 16-bit WAV (mono or stereo).
+
+```bash
+# Convert audio to required format
+ffmpeg -i voice.mp3 -ar 48000 -sample_fmt s16 voice_48k.wav
+
+# Embed audio in carrier WAV
+zimhide encode carrier.wav -o output.wav --audio voice_48k.wav --method metadata
+
+# Embed audio with encryption
+zimhide encode carrier.wav -o output.wav --audio voice_48k.wav --passphrase "secret"
+
+# Embed both text and audio
+zimhide encode carrier.wav -o output.wav --message "Note" --audio voice_48k.wav
+```
+
 ### play
 
 Extract and play embedded audio.
 
 ```bash
-# Play embedded audio
+# Play embedded audio (requires system audio player)
 zimhide play output.wav
 
 # Extract to file instead
 zimhide play output.wav --extract-to recovered.wav
 
 # With decryption
-zimhide play output.wav --passphrase "puzzle"
+zimhide play output.wav --passphrase "secret"
 zimhide play output.wav --key my.priv
 ```
 

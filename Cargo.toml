@@ -15,6 +15,10 @@ categories = ["command-line-utilities", "cryptography", "multimedia::audio"]
 name = "zimhide"
 path = "src/main.rs"
 
+[features]
+default = ["opus-compression"]
+opus-compression = ["dep:opus"]
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
@@ -29,3 +33,4 @@ anyhow = "1"
 rand = "0.8"
 tempfile = "3"
 which = "7"
+opus = { version = "0.3", optional = true }
