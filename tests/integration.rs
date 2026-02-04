@@ -1,6 +1,6 @@
 mod common;
 
-use common::{presets, TestWavConfig};
+use common::{AudioPattern, TestWavConfig, presets};
 use std::process::Command;
 use tempfile::tempdir;
 
@@ -442,7 +442,10 @@ fn test_capacity_exceeded() {
         .unwrap();
 
     // Should fail due to insufficient capacity
-    assert!(!status.success(), "should fail when message exceeds capacity");
+    assert!(
+        !status.success(),
+        "should fail when message exceeds capacity"
+    );
 }
 
 #[test]
@@ -472,7 +475,10 @@ fn test_empty_message() {
         .args(["decode", output.to_str().unwrap()])
         .output()
         .unwrap();
-    assert!(output_result.status.success(), "decode empty message failed");
+    assert!(
+        output_result.status.success(),
+        "decode empty message failed"
+    );
 
     let decoded = String::from_utf8_lossy(&output_result.stdout);
     assert_eq!(decoded.trim(), "");
@@ -589,12 +595,7 @@ fn test_channel_variations() {
 
         // Decode with same channel setting
         let output_result = Command::new(zimhide_binary())
-            .args([
-                "decode",
-                output.to_str().unwrap(),
-                "--channels",
-                channel,
-            ])
+            .args(["decode", output.to_str().unwrap(), "--channels", channel])
             .output()
             .unwrap();
         assert!(
@@ -748,4 +749,768 @@ fn test_metadata_method_with_mono() {
 
     let decoded = String::from_utf8_lossy(&output_result.stdout);
     assert_eq!(decoded.trim(), "Mono metadata");
+}
+
+// ============================================================================
+// Audio embedding tests (--audio flag)
+// ============================================================================
+
+#[test]
+fn test_audio_embedding_basic() {
+    let dir = tempdir().unwrap();
+    let carrier = dir.path().join("carrier.wav");
+    let audio_to_embed = dir.path().join("embed.wav");
+    let output = dir.path().join("output.wav");
+    let extracted = dir.path().join("extracted.wav");
+
+    // Create a larger carrier file (2 seconds for capacity)
+    TestWavConfig::default()
+        .duration(2.0)
+        .write_to_path(&carrier);
+
+    // Create a small audio file to embed (100ms)
+    TestWavConfig::default()
+        .duration(0.1)
+        .pattern(AudioPattern::Sine(880.0))
+        .write_to_path(&audio_to_embed);
+
+    // Embed audio using metadata method (LSB capacity may be too small for raw WAV)
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            carrier.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--audio",
+            audio_to_embed.to_str().unwrap(),
+            "--method",
+            "metadata",
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode with audio failed");
+
+    // Extract using play --extract-to
+    let status = Command::new(zimhide_binary())
+        .args([
+            "play",
+            output.to_str().unwrap(),
+            "--extract-to",
+            extracted.to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "play --extract-to failed");
+
+    // Verify extracted file exists and has content
+    assert!(extracted.exists(), "extracted file not created");
+    let original_bytes = std::fs::read(&audio_to_embed).unwrap();
+    let extracted_bytes = std::fs::read(&extracted).unwrap();
+    assert_eq!(
+        original_bytes, extracted_bytes,
+        "extracted audio doesn't match original"
+    );
+}
+
+#[test]
+fn test_audio_embedding_with_text() {
+    let dir = tempdir().unwrap();
+    let carrier = dir.path().join("carrier.wav");
+    let audio_to_embed = dir.path().join("embed.wav");
+    let output = dir.path().join("output.wav");
+    let extracted = dir.path().join("extracted.wav");
+
+    TestWavConfig::default()
+        .duration(2.0)
+        .write_to_path(&carrier);
+
+    TestWavConfig::default()
+        .duration(0.1)
+        .write_to_path(&audio_to_embed);
+
+    // Embed both text and audio
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            carrier.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Text with audio",
+            "--audio",
+            audio_to_embed.to_str().unwrap(),
+            "--method",
+            "metadata",
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode with text+audio failed");
+
+    // Decode should show text
+    let output_result = Command::new(zimhide_binary())
+        .args(["decode", output.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(output_result.status.success(), "decode failed");
+    let decoded = String::from_utf8_lossy(&output_result.stdout);
+    assert_eq!(decoded.trim(), "Text with audio");
+
+    // Extract audio
+    let status = Command::new(zimhide_binary())
+        .args([
+            "play",
+            output.to_str().unwrap(),
+            "--extract-to",
+            extracted.to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "play --extract-to failed");
+    assert!(extracted.exists());
+}
+
+#[test]
+fn test_audio_embedding_encrypted() {
+    let dir = tempdir().unwrap();
+    let carrier = dir.path().join("carrier.wav");
+    let audio_to_embed = dir.path().join("embed.wav");
+    let output = dir.path().join("output.wav");
+    let extracted = dir.path().join("extracted.wav");
+
+    TestWavConfig::default()
+        .duration(2.0)
+        .write_to_path(&carrier);
+
+    TestWavConfig::default()
+        .duration(0.1)
+        .write_to_path(&audio_to_embed);
+
+    // Embed encrypted audio
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            carrier.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--audio",
+            audio_to_embed.to_str().unwrap(),
+            "--passphrase",
+            "secret123",
+            "--method",
+            "metadata",
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode encrypted audio failed");
+
+    // Extract without passphrase should fail
+    let fail_result = Command::new(zimhide_binary())
+        .args([
+            "play",
+            output.to_str().unwrap(),
+            "--extract-to",
+            extracted.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !fail_result.status.success(),
+        "should fail without passphrase"
+    );
+
+    // Extract with passphrase should succeed
+    let status = Command::new(zimhide_binary())
+        .args([
+            "play",
+            output.to_str().unwrap(),
+            "--extract-to",
+            extracted.to_str().unwrap(),
+            "--passphrase",
+            "secret123",
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "play with passphrase failed");
+
+    let original_bytes = std::fs::read(&audio_to_embed).unwrap();
+    let extracted_bytes = std::fs::read(&extracted).unwrap();
+    assert_eq!(original_bytes, extracted_bytes);
+}
+
+// ============================================================================
+// Multi-recipient encryption tests
+// ============================================================================
+
+#[test]
+fn test_multi_recipient_encryption() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+    let key1_base = dir.path().join("recipient1");
+    let key2_base = dir.path().join("recipient2");
+    let key3_base = dir.path().join("recipient3");
+
+    presets::standard().write_to_path(&input);
+
+    // Generate three keypairs
+    for keybase in [&key1_base, &key2_base, &key3_base] {
+        Command::new(zimhide_binary())
+            .args(["keygen", "--output", keybase.to_str().unwrap()])
+            .status()
+            .unwrap();
+    }
+
+    // Encode to multiple recipients
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Multi-recipient secret",
+            "--encrypt-to",
+            key1_base.with_extension("pub").to_str().unwrap(),
+            "--encrypt-to",
+            key2_base.with_extension("pub").to_str().unwrap(),
+            "--encrypt-to",
+            key3_base.with_extension("pub").to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode to multiple recipients failed");
+
+    // Each recipient should be able to decrypt
+    for (i, keybase) in [&key1_base, &key2_base, &key3_base].iter().enumerate() {
+        let output_result = Command::new(zimhide_binary())
+            .args([
+                "decode",
+                output.to_str().unwrap(),
+                "--key",
+                keybase.with_extension("priv").to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            output_result.status.success(),
+            "recipient {} failed to decrypt",
+            i + 1
+        );
+        let decoded = String::from_utf8_lossy(&output_result.stdout);
+        assert_eq!(decoded.trim(), "Multi-recipient secret");
+    }
+}
+
+// ============================================================================
+// Signed + encrypted combination tests
+// ============================================================================
+
+#[test]
+fn test_signed_and_symmetric_encrypted() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+    let keybase = dir.path().join("signer");
+
+    presets::complex().write_to_path(&input);
+
+    // Generate signing keypair
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", keybase.to_str().unwrap()])
+        .status()
+        .unwrap();
+
+    let pub_key = keybase.with_extension("pub");
+    let priv_key = keybase.with_extension("priv");
+
+    // Encode with both signing and symmetric encryption
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Signed and encrypted",
+            "--sign",
+            "--key",
+            priv_key.to_str().unwrap(),
+            "--passphrase",
+            "secret123",
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode signed+encrypted failed");
+
+    // Decode and verify
+    let output_result = Command::new(zimhide_binary())
+        .args([
+            "decode",
+            output.to_str().unwrap(),
+            "--passphrase",
+            "secret123",
+            "--verify",
+            pub_key.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output_result.status.success(),
+        "decode signed+encrypted failed"
+    );
+
+    let decoded = String::from_utf8_lossy(&output_result.stdout);
+    assert_eq!(decoded.trim(), "Signed and encrypted");
+}
+
+#[test]
+fn test_signed_and_asymmetric_encrypted() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+    let signer_key = dir.path().join("signer");
+    let recipient_key = dir.path().join("recipient");
+
+    presets::noise().write_to_path(&input);
+
+    // Generate keypairs
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", signer_key.to_str().unwrap()])
+        .status()
+        .unwrap();
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", recipient_key.to_str().unwrap()])
+        .status()
+        .unwrap();
+
+    // Encode with signing and asymmetric encryption
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Signed for recipient",
+            "--sign",
+            "--key",
+            signer_key.with_extension("priv").to_str().unwrap(),
+            "--encrypt-to",
+            recipient_key.with_extension("pub").to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode signed+asymmetric failed");
+
+    // Decode with recipient key and verify signature
+    let output_result = Command::new(zimhide_binary())
+        .args([
+            "decode",
+            output.to_str().unwrap(),
+            "--key",
+            recipient_key.with_extension("priv").to_str().unwrap(),
+            "--verify",
+            signer_key.with_extension("pub").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output_result.status.success(),
+        "decode signed+asymmetric failed"
+    );
+
+    let decoded = String::from_utf8_lossy(&output_result.stdout);
+    assert_eq!(decoded.trim(), "Signed for recipient");
+}
+
+// ============================================================================
+// Message file tests
+// ============================================================================
+
+#[test]
+fn test_message_file() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+    let message_file = dir.path().join("message.txt");
+
+    presets::standard().write_to_path(&input);
+
+    // Create message file with multi-line content
+    let message_content =
+        "This is a message from a file.\nIt has multiple lines.\nAnd some special chars: @#$%";
+    std::fs::write(&message_file, message_content).unwrap();
+
+    // Encode using message file
+    let status = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message-file",
+            message_file.to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "encode with message-file failed");
+
+    // Decode
+    let output_result = Command::new(zimhide_binary())
+        .args(["decode", output.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(output_result.status.success(), "decode failed");
+
+    let decoded = String::from_utf8_lossy(&output_result.stdout);
+    assert_eq!(decoded.trim(), message_content);
+}
+
+// ============================================================================
+// Error handling tests
+// ============================================================================
+
+#[test]
+fn test_decode_wrong_passphrase() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+
+    presets::standard().write_to_path(&input);
+
+    // Encode with passphrase
+    Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Secret",
+            "--passphrase",
+            "correct",
+        ])
+        .status()
+        .unwrap();
+
+    // Decode with wrong passphrase should fail
+    let result = Command::new(zimhide_binary())
+        .args(["decode", output.to_str().unwrap(), "--passphrase", "wrong"])
+        .output()
+        .unwrap();
+    assert!(
+        !result.status.success(),
+        "should fail with wrong passphrase"
+    );
+}
+
+#[test]
+fn test_decode_wrong_key() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+    let key1 = dir.path().join("key1");
+    let key2 = dir.path().join("key2");
+
+    presets::standard().write_to_path(&input);
+
+    // Generate two different keypairs
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", key1.to_str().unwrap()])
+        .status()
+        .unwrap();
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", key2.to_str().unwrap()])
+        .status()
+        .unwrap();
+
+    // Encode to key1
+    Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Secret",
+            "--encrypt-to",
+            key1.with_extension("pub").to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+
+    // Decode with key2 should fail
+    let result = Command::new(zimhide_binary())
+        .args([
+            "decode",
+            output.to_str().unwrap(),
+            "--key",
+            key2.with_extension("priv").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!result.status.success(), "should fail with wrong key");
+}
+
+#[test]
+fn test_verify_wrong_public_key() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+    let signer_key = dir.path().join("signer");
+    let other_key = dir.path().join("other");
+
+    presets::standard().write_to_path(&input);
+
+    // Generate two keypairs
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", signer_key.to_str().unwrap()])
+        .status()
+        .unwrap();
+    Command::new(zimhide_binary())
+        .args(["keygen", "--output", other_key.to_str().unwrap()])
+        .status()
+        .unwrap();
+
+    // Sign with signer's key
+    Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Signed message",
+            "--sign",
+            "--key",
+            signer_key.with_extension("priv").to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+
+    // Verify with other's public key should fail
+    let result = Command::new(zimhide_binary())
+        .args([
+            "decode",
+            output.to_str().unwrap(),
+            "--verify",
+            other_key.with_extension("pub").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !result.status.success(),
+        "should fail with wrong verify key"
+    );
+}
+
+#[test]
+fn test_decode_mismatched_bits() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+
+    presets::standard().write_to_path(&input);
+
+    // Encode with 2 bits
+    Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Test",
+            "--bits",
+            "2",
+        ])
+        .status()
+        .unwrap();
+
+    // Decode with 1 bit should fail (wrong magic/corrupt data)
+    let result = Command::new(zimhide_binary())
+        .args(["decode", output.to_str().unwrap(), "--bits", "1"])
+        .output()
+        .unwrap();
+    assert!(!result.status.success(), "should fail with mismatched bits");
+}
+
+#[test]
+fn test_decode_mismatched_channels() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+    let output = dir.path().join("output.wav");
+
+    presets::standard().write_to_path(&input);
+
+    // Encode with left channel only
+    Command::new(zimhide_binary())
+        .args([
+            "encode",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Test",
+            "--channels",
+            "left",
+        ])
+        .status()
+        .unwrap();
+
+    // Decode with right channel should fail
+    let result = Command::new(zimhide_binary())
+        .args(["decode", output.to_str().unwrap(), "--channels", "right"])
+        .output()
+        .unwrap();
+    assert!(
+        !result.status.success(),
+        "should fail with mismatched channels"
+    );
+}
+
+#[test]
+fn test_encode_nonexistent_input() {
+    let dir = tempdir().unwrap();
+    let output = dir.path().join("output.wav");
+
+    let result = Command::new(zimhide_binary())
+        .args([
+            "encode",
+            "/nonexistent/path/input.wav",
+            "-o",
+            output.to_str().unwrap(),
+            "--message",
+            "Test",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !result.status.success(),
+        "should fail with nonexistent input"
+    );
+}
+
+#[test]
+fn test_decode_no_embedded_data() {
+    let dir = tempdir().unwrap();
+    let input = dir.path().join("input.wav");
+
+    // Create a plain WAV with no embedded data
+    presets::standard().write_to_path(&input);
+
+    let result = Command::new(zimhide_binary())
+        .args(["decode", input.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        !result.status.success(),
+        "should fail on file without embedded data"
+    );
+}
+
+// ============================================================================
+// Expanded audio pattern coverage with crypto features
+// ============================================================================
+
+#[test]
+fn test_symmetric_encryption_all_patterns() {
+    let dir = tempdir().unwrap();
+
+    let patterns = [
+        ("silence", presets::silence()),
+        ("noise", presets::noise()),
+        ("complex", presets::complex()),
+        ("sweep", presets::sweep()),
+        ("loud", presets::loud()),
+        ("quiet", presets::quiet()),
+        ("square", presets::square()),
+    ];
+
+    for (name, config) in patterns {
+        let input = dir.path().join(format!("input_{name}.wav"));
+        let output = dir.path().join(format!("output_{name}.wav"));
+
+        config.write_to_path(&input);
+
+        let message = format!("Encrypted message in {name}");
+
+        // Encode
+        let status = Command::new(zimhide_binary())
+            .args([
+                "encode",
+                input.to_str().unwrap(),
+                "-o",
+                output.to_str().unwrap(),
+                "--message",
+                &message,
+                "--passphrase",
+                "pattern_test",
+            ])
+            .status()
+            .unwrap();
+        assert!(status.success(), "{name}: encode failed");
+
+        // Decode
+        let result = Command::new(zimhide_binary())
+            .args([
+                "decode",
+                output.to_str().unwrap(),
+                "--passphrase",
+                "pattern_test",
+            ])
+            .output()
+            .unwrap();
+        assert!(result.status.success(), "{name}: decode failed");
+
+        let decoded = String::from_utf8_lossy(&result.stdout);
+        assert_eq!(decoded.trim(), message, "{name}: message mismatch");
+    }
+}
+
+#[test]
+fn test_metadata_method_all_patterns() {
+    let dir = tempdir().unwrap();
+
+    let patterns = [
+        ("silence", presets::silence()),
+        ("noise", presets::noise()),
+        ("mono", presets::mono_22k()),
+        ("stereo48k", presets::stereo_48k()),
+    ];
+
+    for (name, config) in patterns {
+        let input = dir.path().join(format!("input_{name}.wav"));
+        let output = dir.path().join(format!("output_{name}.wav"));
+
+        config.write_to_path(&input);
+
+        let message = format!("Metadata in {name}");
+
+        // Encode with metadata
+        let status = Command::new(zimhide_binary())
+            .args([
+                "encode",
+                input.to_str().unwrap(),
+                "-o",
+                output.to_str().unwrap(),
+                "--message",
+                &message,
+                "--method",
+                "metadata",
+            ])
+            .status()
+            .unwrap();
+        assert!(status.success(), "{name}: encode metadata failed");
+
+        // Decode
+        let result = Command::new(zimhide_binary())
+            .args(["decode", output.to_str().unwrap()])
+            .output()
+            .unwrap();
+        assert!(result.status.success(), "{name}: decode metadata failed");
+
+        let decoded = String::from_utf8_lossy(&result.stdout);
+        assert_eq!(decoded.trim(), message, "{name}: message mismatch");
+    }
 }

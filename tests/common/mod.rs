@@ -56,6 +56,7 @@ impl TestWavConfig {
         self
     }
 
+    #[allow(dead_code)]
     pub fn stereo(mut self) -> Self {
         self.channels = 2;
         self
@@ -76,12 +77,14 @@ impl TestWavConfig {
         self
     }
 
+    #[allow(dead_code)]
     pub fn amplitude(mut self, amp: f32) -> Self {
         self.amplitude = amp.clamp(0.0, 1.0);
         self
     }
 
     /// Create a temporary WAV file with this configuration
+    #[allow(dead_code)]
     pub fn create_temp_file(&self) -> NamedTempFile {
         let temp = NamedTempFile::new().expect("Failed to create temp file");
         self.write_to_path(temp.path());
@@ -109,7 +112,7 @@ impl TestWavConfig {
             rng_state ^= rng_state >> 17;
             rng_state ^= rng_state << 5;
             // Convert to -1.0 to 1.0 range
-            (rng_state as f32 / u32::MAX as f32) * 2.0 - 1.0
+            (rng_state as f32 / u32::MAX as f32).mul_add(2.0, -1.0)
         };
 
         for i in 0..total_samples {
@@ -137,7 +140,8 @@ impl TestWavConfig {
                 }
                 AudioPattern::LoudClipping => {
                     // Near-maximum amplitude, will clip slightly
-                    let raw = (t * 440.0 * 2.0 * std::f32::consts::PI).sin() * i16::MAX as f32 * 1.1;
+                    let raw =
+                        (t * 440.0 * 2.0 * std::f32::consts::PI).sin() * i16::MAX as f32 * 1.1;
                     raw.clamp(i16::MIN as f32, i16::MAX as f32)
                 }
                 AudioPattern::VeryQuiet => {
