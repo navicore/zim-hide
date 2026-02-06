@@ -152,7 +152,7 @@ Custom chunk ID: `zimH` (lowercase = non-standard per RIFF spec)
 - [x] Progress indicators for large files
 - [x] `--quiet` and `--verbose` flags
 - [x] Shell completions (bash, zsh, fish, powershell, elvish)
-- [ ] Man page generation
+- [x] Man page generation
 - [ ] More comprehensive test coverage
 - [ ] Benchmarks
 

@@ -1,0 +1,46 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH zimhide 1  "zimhide 0.2.2" 
+.SH NAME
+zimhide \- Zim Steganography Toolkit \- embed and extract encrypted content in WAV files
+.SH SYNOPSIS
+\fBzimhide\fR [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-v\fR|\fB\-\-verbose\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Zim Steganography Toolkit \- embed and extract encrypted content in WAV files
+.SH OPTIONS
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Suppress all output except errors and requested content
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Show detailed output
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+zimhide\-encode(1)
+Embed text or audio into a WAV file
+.TP
+zimhide\-decode(1)
+Extract text content from a WAV file
+.TP
+zimhide\-play(1)
+Extract and play embedded audio from a WAV file
+.TP
+zimhide\-keygen(1)
+Generate a keypair for encryption and signing
+.TP
+zimhide\-inspect(1)
+Inspect embedded content metadata without decrypting
+.TP
+zimhide\-completions(1)
+Generate shell completions
+.TP
+zimhide\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH VERSION
+v0.2.2

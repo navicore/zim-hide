@@ -1,0 +1,43 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH decode 1  "decode " 
+.SH NAME
+decode \- Extract text content from a WAV file
+.SH SYNOPSIS
+\fBdecode\fR [\fB\-\-passphrase\fR] [\fB\-\-key\fR] [\fB\-\-verify\fR] [\fB\-\-bits\fR] [\fB\-\-channels\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIINPUT\fR> 
+.SH DESCRIPTION
+Extract text content from a WAV file
+.SH OPTIONS
+.TP
+\fB\-\-passphrase\fR \fI<PASSPHRASE>\fR
+Passphrase for symmetric decryption
+.TP
+\fB\-\-key\fR \fI<KEY>\fR
+Private key file for asymmetric decryption
+.TP
+\fB\-\-verify\fR \fI<VERIFY>\fR
+Public key file to verify signature
+.TP
+\fB\-\-bits\fR \fI<BITS>\fR [default: 1]
+Bits per sample for LSB method (must match encoding)
+.TP
+\fB\-\-channels\fR \fI<CHANNELS>\fR [default: both]
+Channels used for LSB method (must match encoding)
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+left: Embed in left channel only
+.IP \(bu 2
+right: Embed in right channel only
+.IP \(bu 2
+both: Embed in both channels
+.RE
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+<\fIINPUT\fR>
+Input WAV file with embedded data

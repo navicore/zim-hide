@@ -1,0 +1,16 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH keygen 1  "keygen " 
+.SH NAME
+keygen \- Generate a keypair for encryption and signing
+.SH SYNOPSIS
+\fBkeygen\fR [\fB\-o\fR|\fB\-\-output\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Generate a keypair for encryption and signing
+.SH OPTIONS
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fI<OUTPUT>\fR
+Output base path (creates <name>.pub and <name>.priv)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help

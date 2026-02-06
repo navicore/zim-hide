@@ -35,3 +35,8 @@ tempfile = "3"
 which = "7"
 opus = { version = "0.3", optional = true }
 indicatif = "0.17"
+clap_mangen = "0.2"
+
+[[bin]]
+name = "gen-man"
+path = "src/bin/gen_man.rs"

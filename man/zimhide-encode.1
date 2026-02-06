@@ -1,0 +1,71 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH encode 1  "encode " 
+.SH NAME
+encode \- Embed text or audio into a WAV file
+.SH SYNOPSIS
+\fBencode\fR <\fB\-o\fR|\fB\-\-output\fR> [\fB\-\-message\fR] [\fB\-\-message\-file\fR] [\fB\-\-audio\fR] [\fB\-\-passphrase\fR] [\fB\-\-encrypt\-to\fR] [\fB\-\-sign\fR] [\fB\-\-key\fR] [\fB\-\-method\fR] [\fB\-\-bits\fR] [\fB\-\-channels\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIINPUT\fR> 
+.SH DESCRIPTION
+Embed text or audio into a WAV file
+.SH OPTIONS
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fI<OUTPUT>\fR
+Output WAV file
+.TP
+\fB\-\-message\fR \fI<MESSAGE>\fR
+Text message to embed
+.TP
+\fB\-\-message\-file\fR \fI<MESSAGE_FILE>\fR
+File containing text message to embed
+.TP
+\fB\-\-audio\fR \fI<AUDIO>\fR
+Audio file to embed (WAV, 48kHz, 16\-bit, mono/stereo). Compressed with Opus
+.TP
+\fB\-\-passphrase\fR \fI<PASSPHRASE>\fR
+Passphrase for symmetric encryption
+.TP
+\fB\-\-encrypt\-to\fR \fI<ENCRYPT_TO>\fR
+Public key file(s) for asymmetric encryption (can be repeated)
+.TP
+\fB\-\-sign\fR
+Sign the message
+.TP
+\fB\-\-key\fR \fI<KEY>\fR
+Private key file for signing
+.TP
+\fB\-\-method\fR \fI<METHOD>\fR [default: lsb]
+Steganography method
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+lsb: LSB (Least Significant Bit) embedding
+.IP \(bu 2
+metadata: RIFF metadata chunk embedding
+.RE
+.TP
+\fB\-\-bits\fR \fI<BITS>\fR [default: 1]
+Bits per sample for LSB method (1\-4)
+.TP
+\fB\-\-channels\fR \fI<CHANNELS>\fR [default: both]
+Channels to use for LSB method
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+left: Embed in left channel only
+.IP \(bu 2
+right: Embed in right channel only
+.IP \(bu 2
+both: Embed in both channels
+.RE
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+<\fIINPUT\fR>
+Input WAV file
