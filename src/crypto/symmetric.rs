@@ -53,13 +53,17 @@ pub fn encrypt_symmetric(plaintext: &[u8], passphrase: &str) -> Result<Vec<u8>> 
 
 pub fn decrypt_symmetric(data: &[u8], passphrase: &str) -> Result<Vec<u8>> {
     if data.is_empty() {
-        return Err(anyhow!("Empty ciphertext"));
+        return Err(anyhow!("Cannot decrypt: ciphertext is empty"));
     }
 
     let salt_len = data[0] as usize;
-    if data.len() < 1 + salt_len + NONCE_SIZE + 16 {
-        // 16 is auth tag
-        return Err(anyhow!("Ciphertext too short"));
+    let min_size = 1 + salt_len + NONCE_SIZE + 16; // 16 is auth tag
+    if data.len() < min_size {
+        return Err(anyhow!(
+            "Ciphertext too short: expected at least {} bytes, got {}",
+            min_size,
+            data.len()
+        ));
     }
 
     let salt_bytes = &data[1..=salt_len];

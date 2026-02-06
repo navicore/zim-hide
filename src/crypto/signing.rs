@@ -19,7 +19,12 @@ pub fn verify_signature(
     public_key
         .ed25519
         .verify(message, &signature)
-        .map_err(|_| anyhow!("Signature verification failed"))
+        .map_err(|_| {
+            anyhow!(
+                "Signature verification failed: message was not signed by key {}",
+                public_key.fingerprint()
+            )
+        })
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 use super::traits::{ChannelMode, EmbedOptions, StegoMethod, StegoMethodType};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use std::path::Path;
 
@@ -13,15 +13,20 @@ impl LsbSteganography {
     }
 
     fn get_spec_and_samples(path: &Path) -> Result<(WavSpec, Vec<i32>)> {
-        let reader = WavReader::open(path)?;
+        let reader = WavReader::open(path)
+            .with_context(|| format!("Failed to open WAV file: {}", path.display()))?;
         let spec = reader.spec();
 
         let samples: Vec<i32> = match spec.sample_format {
             SampleFormat::Int => reader
                 .into_samples::<i32>()
-                .collect::<Result<Vec<_>, _>>()?,
+                .collect::<Result<Vec<_>, _>>()
+                .with_context(|| format!("Failed to read samples from: {}", path.display()))?,
             SampleFormat::Float => {
-                return Err(anyhow!("Float WAV files are not supported"));
+                return Err(anyhow!(
+                    "Float WAV files are not supported: {}",
+                    path.display()
+                ));
             }
         };
 
@@ -62,7 +67,10 @@ impl StegoMethod for LsbSteganography {
 
         let bits_per_sample = self.options.bits_per_sample;
         if !(1..=4).contains(&bits_per_sample) {
-            return Err(anyhow!("bits_per_sample must be between 1 and 4"));
+            return Err(anyhow!(
+                "bits_per_sample must be between 1 and 4, got {}",
+                bits_per_sample
+            ));
         }
 
         // Calculate capacity
@@ -119,7 +127,8 @@ impl StegoMethod for LsbSteganography {
         }
 
         // Write output file
-        let mut writer = WavWriter::create(output_path, spec)?;
+        let mut writer = WavWriter::create(output_path, spec)
+            .with_context(|| format!("Failed to create output WAV: {}", output_path.display()))?;
         for sample in samples {
             match spec.bits_per_sample {
                 8 => writer.write_sample(sample as i8)?,
@@ -226,7 +235,8 @@ impl StegoMethod for LsbSteganography {
     }
 
     fn capacity(&self, input_path: &Path) -> Result<usize> {
-        let reader = WavReader::open(input_path)?;
+        let reader = WavReader::open(input_path)
+            .with_context(|| format!("Failed to open WAV file: {}", input_path.display()))?;
         let spec = reader.spec();
         let total_samples = reader.len() as usize;
 
