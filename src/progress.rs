@@ -16,9 +16,11 @@ impl Progress {
         let bar = if verbosity.show_status() {
             let pb = ProgressBar::new(total);
             pb.set_style(
-                ProgressStyle::with_template("{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} {msg}")
-                    .unwrap()
-                    .progress_chars("#>-"),
+                ProgressStyle::with_template(
+                    "{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} {msg}",
+                )
+                .unwrap()
+                .progress_chars("#>-"),
             );
             Some(pb)
         } else {
