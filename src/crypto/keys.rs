@@ -116,12 +116,8 @@ impl PrivateKey {
             ));
         }
 
-        let ed25519_bytes: [u8; 32] = bytes[0..32]
-            .try_into()
-            .expect("length validated");
-        let x25519_bytes: [u8; 32] = bytes[32..64]
-            .try_into()
-            .expect("length validated");
+        let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().expect("length validated");
+        let x25519_bytes: [u8; 32] = bytes[32..64].try_into().expect("length validated");
 
         let ed25519 = SigningKey::from_bytes(&ed25519_bytes);
         let x25519 = X25519Secret::from(x25519_bytes);
@@ -185,12 +181,8 @@ impl PublicKey {
             ));
         }
 
-        let ed25519_bytes: [u8; 32] = bytes[0..32]
-            .try_into()
-            .expect("length validated");
-        let x25519_bytes: [u8; 32] = bytes[32..64]
-            .try_into()
-            .expect("length validated");
+        let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().expect("length validated");
+        let x25519_bytes: [u8; 32] = bytes[32..64].try_into().expect("length validated");
 
         let ed25519 = VerifyingKey::from_bytes(&ed25519_bytes)
             .map_err(|e| anyhow!("Invalid Ed25519 public key in {}: {}", path.display(), e))?;

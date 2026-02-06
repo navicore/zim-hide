@@ -140,8 +140,9 @@ impl StegoMethod for MetadataSteganography {
         if let Some((pos, size)) = Self::find_chunk(&mut file)? {
             file.seek(SeekFrom::Start(pos + 8))?;
             let mut data = vec![0u8; size as usize];
-            file.read_exact(&mut data)
-                .with_context(|| format!("Failed to read zimH chunk from: {}", input_path.display()))?;
+            file.read_exact(&mut data).with_context(|| {
+                format!("Failed to read zimH chunk from: {}", input_path.display())
+            })?;
             Ok(data)
         } else {
             Err(anyhow!(
