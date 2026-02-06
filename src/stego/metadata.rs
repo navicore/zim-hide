@@ -1,5 +1,5 @@
 use super::traits::{StegoMethod, StegoMethodType};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -66,14 +66,20 @@ impl Default for MetadataSteganography {
 
 impl StegoMethod for MetadataSteganography {
     fn embed(&self, input_path: &Path, output_path: &Path, data: &[u8]) -> Result<()> {
-        let mut input = File::open(input_path)?;
+        let mut input = File::open(input_path)
+            .with_context(|| format!("Failed to open input file: {}", input_path.display()))?;
 
         // Read entire input file
         let mut contents = Vec::new();
-        input.read_to_end(&mut contents)?;
+        input
+            .read_to_end(&mut contents)
+            .with_context(|| format!("Failed to read input file: {}", input_path.display()))?;
 
         if contents.len() < 12 || &contents[0..4] != b"RIFF" || &contents[8..12] != b"WAVE" {
-            return Err(anyhow!("Not a valid WAV file"));
+            return Err(anyhow!(
+                "Not a valid WAV file: {}\nExpected RIFF/WAVE headers not found",
+                input_path.display()
+            ));
         }
 
         // Remove existing zimH chunk if present
@@ -118,22 +124,31 @@ impl StegoMethod for MetadataSteganography {
         clean_contents[4..8].copy_from_slice(&riff_size.to_le_bytes());
 
         // Write output
-        let mut output = File::create(output_path)?;
-        output.write_all(&clean_contents)?;
+        let mut output = File::create(output_path)
+            .with_context(|| format!("Failed to create output file: {}", output_path.display()))?;
+        output
+            .write_all(&clean_contents)
+            .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
 
         Ok(())
     }
 
     fn extract(&self, input_path: &Path) -> Result<Vec<u8>> {
-        let mut file = File::open(input_path)?;
+        let mut file = File::open(input_path)
+            .with_context(|| format!("Failed to open file: {}", input_path.display()))?;
 
         if let Some((pos, size)) = Self::find_chunk(&mut file)? {
             file.seek(SeekFrom::Start(pos + 8))?;
             let mut data = vec![0u8; size as usize];
-            file.read_exact(&mut data)?;
+            file.read_exact(&mut data).with_context(|| {
+                format!("Failed to read zimH chunk from: {}", input_path.display())
+            })?;
             Ok(data)
         } else {
-            Err(anyhow!("No zimH chunk found in WAV file"))
+            Err(anyhow!(
+                "No zimH chunk found in: {}\nFile may not contain embedded zimhide data",
+                input_path.display()
+            ))
         }
     }
 

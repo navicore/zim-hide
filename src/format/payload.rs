@@ -155,7 +155,10 @@ impl Payload {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < 8 {
-            return Err(anyhow!("Payload too short"));
+            return Err(anyhow!(
+                "Payload too short: expected at least 8 bytes, got {}",
+                bytes.len()
+            ));
         }
 
         let mut offset = 0;
@@ -171,7 +174,12 @@ impl Payload {
 
         let text = if text_len > 0 {
             if offset + text_len > bytes.len() {
-                return Err(anyhow!("Payload truncated: text extends beyond data"));
+                return Err(anyhow!(
+                    "Payload truncated: text requires {} bytes at offset {}, but only {} bytes available",
+                    text_len,
+                    offset,
+                    bytes.len()
+                ));
             }
             let text_bytes = &bytes[offset..offset + text_len];
             offset += text_len;
@@ -182,7 +190,11 @@ impl Payload {
 
         // Read audio
         if offset + 4 > bytes.len() {
-            return Err(anyhow!("Payload truncated: missing audio length"));
+            return Err(anyhow!(
+                "Payload truncated: need 4 bytes for audio length at offset {}, but only {} bytes available",
+                offset,
+                bytes.len()
+            ));
         }
         let audio_len = u32::from_le_bytes([
             bytes[offset],
@@ -194,7 +206,12 @@ impl Payload {
 
         let audio = if audio_len > 0 {
             if offset + audio_len > bytes.len() {
-                return Err(anyhow!("Payload truncated: audio extends beyond data"));
+                return Err(anyhow!(
+                    "Payload truncated: audio requires {} bytes at offset {}, but only {} bytes available",
+                    audio_len,
+                    offset,
+                    bytes.len()
+                ));
             }
             Some(bytes[offset..offset + audio_len].to_vec())
         } else {
@@ -228,7 +245,11 @@ impl EmbeddedData {
         let payload_end = payload_start + header.payload_length as usize;
 
         if bytes.len() < payload_end {
-            return Err(anyhow!("Data truncated: payload extends beyond data"));
+            return Err(anyhow!(
+                "Data truncated: payload requires {} bytes, but only {} bytes available",
+                payload_end,
+                bytes.len()
+            ));
         }
 
         let payload = bytes[payload_start..payload_end].to_vec();
@@ -237,7 +258,11 @@ impl EmbeddedData {
             let sig_start = payload_end;
             let sig_end = sig_start + SIGNATURE_SIZE;
             if bytes.len() < sig_end {
-                return Err(anyhow!("Data truncated: signature extends beyond data"));
+                return Err(anyhow!(
+                    "Data truncated: signature requires {} bytes, but only {} bytes available",
+                    sig_end,
+                    bytes.len()
+                ));
             }
             let mut sig = [0u8; SIGNATURE_SIZE];
             sig.copy_from_slice(&bytes[sig_start..sig_end]);

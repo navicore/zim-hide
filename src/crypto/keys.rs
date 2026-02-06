@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
@@ -86,30 +86,38 @@ impl PrivateKey {
     }
 
     pub fn load(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)?;
+        let content = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read private key: {}", path.display()))?;
         let content = content.trim();
 
         if !content.starts_with(PRIVATE_KEY_HEADER) || !content.ends_with(PRIVATE_KEY_FOOTER) {
-            return Err(anyhow!("Invalid private key format"));
+            return Err(anyhow!(
+                "Invalid private key format in {}: missing header/footer markers",
+                path.display()
+            ));
         }
 
         let encoded = content
             .strip_prefix(PRIVATE_KEY_HEADER)
-            .unwrap()
+            .expect("header validated")
             .strip_suffix(PRIVATE_KEY_FOOTER)
-            .unwrap()
+            .expect("footer validated")
             .trim();
 
-        let bytes = BASE64.decode(encoded)?;
+        let bytes = BASE64
+            .decode(encoded)
+            .with_context(|| format!("Invalid base64 in private key: {}", path.display()))?;
+
         if bytes.len() != 64 {
             return Err(anyhow!(
-                "Invalid private key length: expected 64 bytes, got {}",
+                "Invalid private key in {}: expected 64 bytes, got {}",
+                path.display(),
                 bytes.len()
             ));
         }
 
-        let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().unwrap();
-        let x25519_bytes: [u8; 32] = bytes[32..64].try_into().unwrap();
+        let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().expect("length validated");
+        let x25519_bytes: [u8; 32] = bytes[32..64].try_into().expect("length validated");
 
         let ed25519 = SigningKey::from_bytes(&ed25519_bytes);
         let x25519 = X25519Secret::from(x25519_bytes);
@@ -143,33 +151,41 @@ impl PublicKey {
     }
 
     pub fn load(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)?;
+        let content = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read public key: {}", path.display()))?;
         let content = content.trim();
 
         if !content.starts_with(PUBLIC_KEY_HEADER) || !content.ends_with(PUBLIC_KEY_FOOTER) {
-            return Err(anyhow!("Invalid public key format"));
+            return Err(anyhow!(
+                "Invalid public key format in {}: missing header/footer markers",
+                path.display()
+            ));
         }
 
         let encoded = content
             .strip_prefix(PUBLIC_KEY_HEADER)
-            .unwrap()
+            .expect("header validated")
             .strip_suffix(PUBLIC_KEY_FOOTER)
-            .unwrap()
+            .expect("footer validated")
             .trim();
 
-        let bytes = BASE64.decode(encoded)?;
+        let bytes = BASE64
+            .decode(encoded)
+            .with_context(|| format!("Invalid base64 in public key: {}", path.display()))?;
+
         if bytes.len() != 64 {
             return Err(anyhow!(
-                "Invalid public key length: expected 64 bytes, got {}",
+                "Invalid public key in {}: expected 64 bytes, got {}",
+                path.display(),
                 bytes.len()
             ));
         }
 
-        let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().unwrap();
-        let x25519_bytes: [u8; 32] = bytes[32..64].try_into().unwrap();
+        let ed25519_bytes: [u8; 32] = bytes[0..32].try_into().expect("length validated");
+        let x25519_bytes: [u8; 32] = bytes[32..64].try_into().expect("length validated");
 
         let ed25519 = VerifyingKey::from_bytes(&ed25519_bytes)
-            .map_err(|e| anyhow!("Invalid Ed25519 public key: {}", e))?;
+            .map_err(|e| anyhow!("Invalid Ed25519 public key in {}: {}", path.display(), e))?;
         let x25519 = X25519Public::from(x25519_bytes);
 
         Ok(Self { ed25519, x25519 })
